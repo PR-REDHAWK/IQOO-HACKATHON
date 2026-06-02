@@ -1,10 +1,30 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 
 export const AgeVerificationScreen = () => {
-  const { setActiveScreen, interceptedPurchase, activeAlert, setActiveAlert } = useContext(AppContext);
+  const {
+    setActiveScreen,
+    interceptedPurchase,
+    activeAlert,
+    displayPendingTransactions,
+    childProfiles,
+    setActiveAlert
+  } = useContext(AppContext);
   const [scanProgress, setScanProgress] = useState(0);
   const [isScanning, setIsScanning] = useState(true);
+  const activeTx = interceptedPurchase || activeAlert || displayPendingTransactions[0];
+  const activeChild = activeTx ? childProfiles[activeTx.childId] : null;
+  const estimatedAge = activeChild
+    ? (activeChild.age + Math.min(0.8, Math.max(0.1, activeTx.riskScore / 250))).toFixed(1)
+    : '--';
+  const confidenceScore = activeTx
+    ? Math.max(85, 100 - Math.round(activeTx.riskScore / 12)).toFixed(1)
+    : '--';
+  const scanTarget = activeTx ? Math.max(75, Math.min(96, activeTx.riskScore)) : 75;
+
+  useEffect(() => {
+    setIsScanning(true);
+  }, [activeTx?.id]);
 
   // Progressive scan timer simulation
   useEffect(() => {
@@ -12,17 +32,17 @@ export const AgeVerificationScreen = () => {
     setScanProgress(0);
     const interval = setInterval(() => {
       setScanProgress((prev) => {
-        if (prev >= 84) {
+        if (prev >= scanTarget) {
           clearInterval(interval);
           setIsScanning(false);
-          return 84;
+          return scanTarget;
         }
         return prev + Math.floor(Math.random() * 5 + 3);
       });
     }, 150);
 
     return () => clearInterval(interval);
-  }, [isScanning]);
+  }, [isScanning, scanTarget]);
 
   const handleRetry = () => {
     setIsScanning(true);
@@ -30,8 +50,8 @@ export const AgeVerificationScreen = () => {
 
   const handleConfirm = () => {
     // Navigate parent straight to the approval screen for this transaction
-    if (interceptedPurchase) {
-      setActiveAlert(interceptedPurchase);
+    if (activeTx) {
+      setActiveAlert(activeTx);
     }
     setActiveScreen('approval');
   };
@@ -45,7 +65,7 @@ export const AgeVerificationScreen = () => {
           Identity Verification
         </h2>
         <p className="text-xs text-on-surface-variant leading-relaxed">
-          Biometric face-telemetry checking child age against target entertainment age thresholds.
+          Biometric face-telemetry checking {activeChild?.name || 'the child'} against {activeTx?.gameName || 'purchase'} age thresholds.
         </p>
       </div>
 
@@ -101,11 +121,11 @@ export const AgeVerificationScreen = () => {
           <div className="absolute right-4 top-16 space-y-2">
             <div className="bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/5 text-right transition-all">
               <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">Estimated Age</p>
-              <p className="font-headline-md text-[18px] font-bold text-secondary-container">12.4 Years</p>
+              <p className="font-headline-md text-[18px] font-bold text-secondary-container">{estimatedAge} Years</p>
             </div>
             <div className="bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/5 text-right transition-all">
               <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">Confidence</p>
-              <p className="font-headline-md text-[18px] font-bold text-secondary-container">98.2%</p>
+              <p className="font-headline-md text-[18px] font-bold text-secondary-container">{confidenceScore}%</p>
             </div>
           </div>
 
@@ -119,7 +139,7 @@ export const AgeVerificationScreen = () => {
                 </span>
                 <div>
                   <p className="text-[8px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">AI Profile mismatch</p>
-                  <p className="text-[12px] text-primary-container font-extrabold mt-0.5 leading-none">MINOR DETECTED</p>
+                  <p className="text-[12px] text-primary-container font-extrabold mt-0.5 leading-none">{activeChild?.name || 'Child'} verified for {activeTx?.ageRating || 'rating'} content</p>
                 </div>
               </div>
             )}

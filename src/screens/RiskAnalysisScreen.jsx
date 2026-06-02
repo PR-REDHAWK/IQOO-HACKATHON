@@ -1,13 +1,21 @@
-import React, { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { RiskMeter } from '../components/RiskMeter';
 
 export const RiskAnalysisScreen = () => {
-  const { displayPendingTransactions, childProfiles } = useContext(AppContext);
+  const { activeAlert, displayPendingTransactions, childProfiles } = useContext(AppContext);
   const pendingTransactions = displayPendingTransactions;
-  const [selectedTxId, setSelectedTxId] = useState(pendingTransactions[0]?.id || '');
+  const getDefaultTransactionId = () => {
+    const activeAlertIsPending = pendingTransactions.some((transaction) => transaction.id === activeAlert?.id);
+    return String(activeAlertIsPending ? activeAlert.id : pendingTransactions[0]?.id || '');
+  };
+  const [selectedTxId, setSelectedTxId] = useState(getDefaultTransactionId);
 
-  const activeTx = pendingTransactions.find(t => t.id === selectedTxId) || pendingTransactions[0];
+  useEffect(() => {
+    setSelectedTxId(getDefaultTransactionId());
+  }, [activeAlert, pendingTransactions]);
+
+  const activeTx = pendingTransactions.find(t => String(t.id) === String(selectedTxId)) || pendingTransactions[0];
 
   if (!activeTx) {
     return (
@@ -23,7 +31,12 @@ export const RiskAnalysisScreen = () => {
     );
   }
 
-  const child = childProfiles[activeTx.childId];
+  const child = childProfiles[activeTx.childId] || { name: activeTx.childName, age: '--', avgSpending: 0 };
+  const formatCurrency = (value) =>
+    value.toLocaleString('en-US', { minimumFractionDigits: 2 });
+  const estimatedAge = typeof child.age === 'number'
+    ? (child.age + Math.min(0.8, Math.max(0.1, activeTx.riskScore / 250))).toFixed(1)
+    : child.age;
 
   return (
     <div className="min-h-screen bg-black text-[#e2e2e2] pt-20 pb-28 px-4 md:px-16 max-w-[1280px] mx-auto space-y-8">
@@ -45,13 +58,13 @@ export const RiskAnalysisScreen = () => {
             Analyzing:
           </span>
           <select
-            value={selectedTxId}
+            value={String(selectedTxId)}
             onChange={(e) => setSelectedTxId(e.target.value)}
             className="flex-1 md:flex-initial bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-secondary-container font-semibold"
           >
             {pendingTransactions.map(t => (
               <option key={t.id} value={t.id} className="bg-black text-white">
-                {childProfiles[t.childId].name}: {t.gameName} (${t.amount})
+                {(childProfiles[t.childId] || { name: t.childName }).name}: {t.gameName} (${formatCurrency(t.amount)})
               </option>
             ))}
           </select>
@@ -134,7 +147,7 @@ export const RiskAnalysisScreen = () => {
                 <div>
                   <h4 className="text-white font-bold">Spending Anomaly</h4>
                   <p className="text-on-surface-variant text-[11px] mt-0.5">
-                    This purchase is {activeTx.ratios?.amountRatio}x larger than {child.name}'s average expenditure (${child.avgSpending.toFixed(2)}).
+                    This purchase is {activeTx.ratios?.amountRatio}x larger than {child.name}'s average expenditure (${formatCurrency(child.avgSpending)}).
                   </p>
                 </div>
               </div>
@@ -157,7 +170,7 @@ export const RiskAnalysisScreen = () => {
               Neural Guard telemetry
             </h4>
             <p className="text-[12px] text-on-surface-variant leading-relaxed">
-              Biometric check estimated child age at <span className="text-white font-bold">12.4 yrs</span>, matching Leo's profile age (12). Request intercepted due to ESRB rating Mismatch (Game Rated {activeTx.ageRating} vs Child Age 12).
+              Biometric check estimated child age at <span className="text-white font-bold">{estimatedAge} yrs</span>, matching {child.name}'s profile age ({child.age}). Request intercepted due to ESRB rating check (Game Rated {activeTx.ageRating} vs Child Age {child.age}).
             </p>
             <div className="flex justify-between items-center bg-white/5 px-3 py-2 rounded-xl border border-white/5 text-[11px] text-on-surface-variant font-mono">
               <span>MODEL: G-1.5-FLASH</span>

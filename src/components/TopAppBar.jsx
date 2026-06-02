@@ -1,9 +1,16 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import logo from '../assets/logo.svg';
 
 export const TopAppBar = () => {
-  const { pendingTransactions, activeScreen, setActiveScreen } = useContext(AppContext);
+  const {
+    pendingTransactions,
+    activeScreen,
+    setActiveScreen,
+    demoScenarios,
+    activeScenarioId,
+    switchScenario
+  } = useContext(AppContext);
   const alertsCount = pendingTransactions.length;
 
   return (
@@ -44,6 +51,26 @@ export const TopAppBar = () => {
 
         {/* Right side controls */}
         <div className="flex items-center gap-3">
+          {activeScreen !== 'landing' && (
+            <label className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 h-10 max-w-[150px] sm:max-w-none">
+              <span className="material-symbols-outlined text-primary-fixed-dim text-[18px]">
+                tune
+              </span>
+              <select
+                value={activeScenarioId}
+                onChange={(event) => switchScenario(event.target.value)}
+                className="bg-transparent text-xs font-bold text-on-surface-variant focus:outline-none min-w-0"
+                aria-label="Demo scenario"
+              >
+                {demoScenarios.map((scenario) => (
+                  <option key={scenario.id} value={scenario.id} className="bg-black text-white">
+                    {scenario.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           {/* Notifications / Alerts Toggle */}
           <button 
             onClick={() => setActiveScreen('dashboard')} 
