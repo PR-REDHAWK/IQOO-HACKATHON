@@ -3,7 +3,8 @@ import { AppContext } from '../context/AppContext';
 import { RiskMeter } from '../components/RiskMeter';
 
 export const RiskAnalysisScreen = () => {
-  const { pendingTransactions, childProfiles } = useContext(AppContext);
+  const { displayPendingTransactions, childProfiles } = useContext(AppContext);
+  const pendingTransactions = displayPendingTransactions;
   const [selectedTxId, setSelectedTxId] = useState(pendingTransactions[0]?.id || '');
 
   const activeTx = pendingTransactions.find(t => t.id === selectedTxId) || pendingTransactions[0];

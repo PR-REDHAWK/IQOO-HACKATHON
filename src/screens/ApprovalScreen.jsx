@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useCallback, useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { RiskMeter } from '../components/RiskMeter';
 
@@ -6,6 +6,7 @@ export const ApprovalScreen = () => {
   const { 
     setActiveScreen, 
     activeAlert, 
+    displayPendingTransactions,
     childProfiles, 
     approveTransaction, 
     declineTransaction 
@@ -14,7 +15,43 @@ export const ApprovalScreen = () => {
   const [voiceProgress, setVoiceProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
 
-  const t = activeAlert;
+  const t = activeAlert || displayPendingTransactions[0];
+  const child = t ? childProfiles[t.childId] || { name: t.childName } : null;
+
+  const handleApprove = useCallback(() => {
+    if (!t) return;
+    approveTransaction(t.id);
+    setActiveScreen('dashboard');
+  }, [approveTransaction, setActiveScreen, t]);
+
+  const handleReject = useCallback(() => {
+    if (!t) return;
+    declineTransaction(t.id);
+    setActiveScreen('dashboard');
+  }, [declineTransaction, setActiveScreen, t]);
+
+  // Voice activation hold logic
+  useEffect(() => {
+    let timer;
+    if (isHolding && t) {
+      timer = setInterval(() => {
+        setVoiceProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(timer);
+            handleApprove();
+            setIsHolding(false);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 150);
+    } else {
+      setVoiceProgress(0);
+    }
+
+    return () => clearInterval(timer);
+  }, [isHolding, t, handleApprove]);
+
   if (!t) {
     return (
       <div className="min-h-screen bg-black text-[#e2e2e2] pt-24 px-6 text-center space-y-4">
@@ -28,44 +65,6 @@ export const ApprovalScreen = () => {
       </div>
     );
   }
-
-  const child = childProfiles[t.childId];
-
-  // Voice activation hold logic
-  useEffect(() => {
-    let timer;
-    if (isHolding) {
-      timer = setInterval(() => {
-        setVoiceProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(timer);
-            // Approve transaction
-            approveTransaction(t.id);
-            setActiveScreen('dashboard');
-            setIsHolding(false);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 150);
-    } else {
-      setVoiceProgress(0);
-    }
-
-    return () => clearInterval(timer);
-  }, [isHolding, approveTransaction, t.id, setActiveScreen]);
-
-  const handleApprove = () => {
-    approveTransaction(t.id);
-    setActiveScreen('dashboard');
-  };
-
-  const handleReject = () => {
-    declineTransaction(t.id);
-    setActiveScreen('dashboard');
-  };
-
-  const isHighRisk = t.riskScore >= 75;
 
   return (
     <div className="min-h-screen bg-black text-[#e2e2e2] pt-20 pb-28 px-4 md:px-16 max-w-[1280px] mx-auto space-y-6">

@@ -4,10 +4,12 @@ import { AppContext } from '../context/AppContext';
 export const DashboardScreen = () => {
   const {
     setActiveScreen,
-    monthlySavings,
     pendingTransactions,
+    displayPendingTransactions,
+    approvedCount,
+    blockedCount,
+    totalProtectedAmount,
     childProfiles,
-    activeAlert,
     setActiveAlert,
     approveTransaction,
     declineTransaction,
@@ -18,6 +20,13 @@ export const DashboardScreen = () => {
 
   const [showSettings, setShowSettings] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(geminiApiKey);
+  const pendingApprovalCount = pendingTransactions.length;
+  const highestRiskScore = displayPendingTransactions.reduce(
+    (highest, transaction) => Math.max(highest, transaction.riskScore),
+    0
+  );
+  const formatCurrency = (value) =>
+    value.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
   const handleSaveKey = (e) => {
     e.preventDefault();
@@ -93,7 +102,7 @@ export const DashboardScreen = () => {
             Total Protection Active
           </p>
           <h3 className="font-headline-lg text-[22px] md:text-[26px] font-extrabold text-primary-fixed-dim tracking-tight">
-            Monthly Savings: ${monthlySavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            Protected Amount: ${formatCurrency(totalProtectedAmount)}
           </h3>
         </div>
         <button 
@@ -104,6 +113,32 @@ export const DashboardScreen = () => {
         </button>
       </section>
 
+      {/* Context Metrics */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Pending Approvals', value: pendingApprovalCount, icon: 'pending_actions', color: 'text-primary-fixed-dim' },
+          { label: 'Approved', value: approvedCount, icon: 'check_circle', color: 'text-secondary-container' },
+          { label: 'Blocked', value: blockedCount, icon: 'block', color: 'text-error' },
+          { label: 'Protected', value: `$${formatCurrency(totalProtectedAmount)}`, icon: 'shield', color: 'text-secondary-container' }
+        ].map((metric) => (
+          <div key={metric.label} className="glass-card rounded-2xl p-4 border border-white/5 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 flex-shrink-0">
+              <span className={`material-symbols-outlined text-[22px] ${metric.color}`}>
+                {metric.icon}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none mb-1.5 truncate">
+                {metric.label}
+              </p>
+              <h3 className="font-headline-md text-[20px] font-extrabold text-white leading-none truncate">
+                {metric.value}
+              </h3>
+            </div>
+          </div>
+        ))}
+      </section>
+
       {/* Pending Approvals Carousel */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -111,11 +146,11 @@ export const DashboardScreen = () => {
             Pending Approvals
           </h3>
           <span className="text-primary-fixed-dim font-label-sm text-xs font-semibold hover:underline cursor-pointer">
-            See all ({pendingTransactions.length})
+            See all ({pendingApprovalCount})
           </span>
         </div>
 
-        {pendingTransactions.length === 0 ? (
+        {pendingApprovalCount === 0 ? (
           <div className="glass-card rounded-2xl p-8 text-center border border-dashed border-white/10 text-on-surface-variant text-sm">
             <span className="material-symbols-outlined text-[48px] mb-2 text-secondary-container animate-pulse">
               verified
@@ -124,7 +159,7 @@ export const DashboardScreen = () => {
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x">
-            {pendingTransactions.map((t) => {
+            {displayPendingTransactions.map((t) => {
               const child = childProfiles[t.childId];
               const isHigh = t.riskScore >= 75;
               const isMed = t.riskScore >= 40 && t.riskScore < 75;
@@ -160,7 +195,7 @@ export const DashboardScreen = () => {
                   {/* Child and Price */}
                   <div className="cursor-pointer" onClick={() => handleCardClick(t)}>
                     <p className="font-label-sm text-[11px] text-on-surface-variant font-semibold">{child.name}</p>
-                    <h4 className="font-headline-md text-[24px] font-extrabold text-white mt-0.5">${t.amount}</h4>
+                    <h4 className="font-headline-md text-[24px] font-extrabold text-white mt-0.5">${formatCurrency(t.amount)}</h4>
                     <p className="text-[13px] text-on-surface-variant line-clamp-1 mt-1 font-medium">
                       {t.gameName}: {t.itemName}
                     </p>
@@ -262,7 +297,7 @@ export const DashboardScreen = () => {
                 </span>
               </div>
               <p className="text-[13px] text-on-surface leading-relaxed">
-                <span className="text-secondary-container font-extrabold">Leo's transaction frequency is up 35%</span> this weekend. Recommend verifying key device security boundaries.
+                <span className="text-secondary-container font-extrabold">{pendingApprovalCount} pending approval{pendingApprovalCount === 1 ? '' : 's'}</span> with a peak risk score of {highestRiskScore}%. Recommend verifying key device security boundaries.
               </p>
             </div>
 
