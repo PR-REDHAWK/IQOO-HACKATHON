@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-fixed-dim: #e9c400;
+  --color-surface-container-low: #1b1b1b;
+  --color-outline-variant: #4d4732;
+  --color-on-secondary-fixed: #002022;
+  --color-surface-bright: #393939;
+  --color-on-primary-container: #705e00;
+  --color-tertiary-fixed-dim: #c8c6c5;
+  --color-surface-container-high: #2a2a2a;
+  --color-on-secondary-fixed-variant: #004f54;
+  --color-surface-container-highest: #353535;
+  --color-secondary-fixed: #7df4ff;
+  --color-on-surface: #e2e2e2;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface: #131313;
+  --color-surface-dim: #131313;
+  --color-on-background: #e2e2e2;
+  --color-background: #131313;
+  --color-on-tertiary: #313030;
+  --color-on-secondary: #00363a;
+  --color-secondary-container: #00eefc;
+  --color-secondary: #d3fbff;
+  --color-on-secondary-container: #00686f;
+  --color-on-tertiary-fixed-variant: #474646;
+  --color-on-surface-variant: #d0c6ab;
+  --color-inverse-on-surface: #303030;
+  --color-on-tertiary-container: #605f5e;
+  --color-surface-tint: #e9c400;
+  --color-primary-container: #ffd700;
+  --color-tertiary: #f9f5f5;
+  --color-error: #ffb4ab;
+  --color-on-primary: #3a3000;
+  --color-primary-fixed: #ffe16d;
+  --color-surface-container: #1f1f1f;
+  --color-primary: #fff6df;
+  --color-tertiary-container: #dcd9d9;
+  --color-tertiary-fixed: #e5e2e1;
+  --color-surface-variant: #353535;
+  --color-on-error: #690005;
+  --color-outline: #999077;
+  --color-error-container: #93000a;
+  --color-inverse-surface: #e2e2e2;
+  --color-on-error-container: #ffdad6;
+  --color-on-primary-fixed: #221b00;
+  --color-on-tertiary-fixed: #1c1b1b;
+  --color-secondary-fixed-dim: #00dbe9;
+  --color-on-primary-fixed-variant: #544600;
+  --color-inverse-primary: #705d00;
+
+  --font-headline-md: Sora, sans-serif;
+  --font-body-md: Inter, sans-serif;
+  --font-body-lg: Inter, sans-serif;
+  --font-headline-xl: Sora, sans-serif;
+  --font-headline-xl-mobile: Sora, sans-serif;
+  --font-label-sm: Inter, sans-serif;
+  --font-headline-lg: Sora, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: #000000;
+    color: #e2e2e2;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Glassmorphism card utility */
+.glass-card {
+  background: rgba(18, 18, 18, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Premium Gold border */
+.premium-border {
+  position: relative;
+  background: #121212;
+  background-clip: padding-box;
+  border: 1px solid transparent;
+}
+.premium-border::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: -1;
+  margin: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #FFD700, transparent);
+}
+
+/* Neon AI glow shadow */
+.ai-glow {
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.12);
+}
+
+/* Ambient AI auroras */
+.ai-aura {
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+/* Verification scan lines */
+.scan-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00F0FF, transparent);
+  box-shadow: 0 0 15px #00F0FF;
+  position: absolute;
+  width: 100%;
+  top: 0;
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  0% { top: 10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 90%; opacity: 0; }
+}
+
+/* HUD elements for face tracking */
+.hud-corner {
+  width: 40px;
+  height: 40px;
+  border-color: #00F0FF;
+  position: absolute;
+}
+
+.glow-pulse {
+  animation: glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 2px #00F0FF); }
+  50% { opacity: 0.5; filter: drop-shadow(0 0 10px #00F0FF); }
+}
+
+/* Bouncing loaders */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; transform: scale(1); filter: blur(20px); }
+  50% { opacity: 1; transform: scale(1.1); filter: blur(40px); }
+}
+
+.ai-glow-effect {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Shimmer loader */
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Hide scrollbar utility */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
