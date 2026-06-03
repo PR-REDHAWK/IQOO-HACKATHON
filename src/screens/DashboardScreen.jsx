@@ -201,13 +201,17 @@ export const DashboardScreen = () => {
                     </p>
                     
                     {/* Dynamic AI Explanation */}
-                    <div className="my-4 bg-white/[0.03] border border-white/5 p-3 rounded-xl">
+                    <div className="my-4 bg-white/[0.03] border border-white/5 p-3 rounded-xl space-y-2">
                       <p className="text-[11px] text-on-surface-variant italic leading-normal flex items-start gap-1.5">
                         <span className="material-symbols-outlined text-secondary-container text-xs mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>
                           auto_awesome
                         </span>
-                        <span>{t.aiExplanation}</span>
+                        <span>{t.riskReasons?.[0] || t.aiExplanation}</span>
                       </p>
+                      <div className="text-[10px] text-secondary-container font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[14px]">shield</span>
+                        {t.recommendation}
+                      </div>
                     </div>
                   </div>
 

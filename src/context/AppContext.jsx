@@ -1,4 +1,5 @@
 import { createContext, useMemo, useState } from 'react';
+import { calculateRisk } from '../utils/riskEngine';
 
 export const AppContext = createContext();
 
@@ -281,30 +282,45 @@ const toChildId = (childName = '') => childName.toLowerCase();
 
 const clone = (value) => structuredClone(value);
 
-const getDisplayTransaction = (transaction) => ({
-  ...transaction,
-  childId: transaction.childId || toChildId(transaction.childName),
-  gameName: transaction.gameName || transaction.game,
-  itemName: transaction.itemName || 'Purchase Request',
-  category: transaction.category || 'In-App',
-  device: transaction.device || `${transaction.childName}'s Device`,
-  time: transaction.time || 'Just Now',
-  date: transaction.date || 'Today',
-  day: transaction.day || 'Sun',
-  ageRating: transaction.ageRating || 'E10+',
-  riskMetrics: transaction.riskMetrics || {
-    ageRisk: Math.min(100, Math.max(10, transaction.riskScore - 8)),
-    amountRisk: transaction.riskScore,
-    frequencyRisk: Math.min(100, Math.max(12, transaction.riskScore - 18)),
-    timeRisk: Math.min(100, Math.max(10, transaction.riskScore - 28))
-  },
-  ratios: transaction.ratios || {
-    amountRatio: (transaction.amount / 1199).toFixed(1)
-  },
-  aiExplanation:
-    transaction.aiExplanation ||
-    `${transaction.childName}'s ${transaction.game} purchase has a ${transaction.riskScore}% risk score and requires guardian approval.`
-});
+const getDisplayTransaction = (transaction, childProfiles = {}) => {
+  const childId = transaction.childId || toChildId(transaction.childName);
+  const profile = childProfiles[childId] || { age: 10, spending: 0, transactionsTodayCount: 0, avgSpending: 1000 };
+  
+  const riskAnalysis = calculateRisk({
+    age: profile.age,
+    purchaseAmount: transaction.amount,
+    purchaseCountToday: profile.transactionsTodayCount,
+    weeklySpend: profile.spending,
+    purchaseTime: transaction.time || 'Just Now',
+    merchantCategory: transaction.category || 'In-App'
+  });
+
+  return {
+    ...transaction,
+    childId,
+    gameName: transaction.gameName || transaction.game,
+    itemName: transaction.itemName || 'Purchase Request',
+    category: transaction.category || 'In-App',
+    device: transaction.device || `${transaction.childName}'s Device`,
+    time: transaction.time || 'Just Now',
+    date: transaction.date || 'Today',
+    day: transaction.day || 'Sun',
+    ageRating: transaction.ageRating || 'E10+',
+    
+    riskScore: riskAnalysis.score,
+    riskLevel: riskAnalysis.level,
+    riskReasons: riskAnalysis.reasons,
+    recommendation: riskAnalysis.recommendation,
+    riskMetrics: riskAnalysis.metrics,
+    
+    ratios: transaction.ratios || {
+      amountRatio: (transaction.amount / profile.avgSpending).toFixed(1)
+    },
+    aiExplanation:
+      transaction.aiExplanation ||
+      `${transaction.childName}'s ${transaction.game} purchase has a ${riskAnalysis.score}% risk score and requires guardian approval.`
+  };
+};
 
 const getScenario = (scenarioId) =>
   demoScenarios.find((scenario) => scenario.id === scenarioId) || demoScenarios[0];
@@ -355,12 +371,14 @@ export const AppProvider = ({ children }) => {
   const [activeScreen, setActiveScreen] = useState('landing');
   const [activeScenarioId, setActiveScenarioId] = useState(demoScenarios[0].id);
   const [scenarioState, setScenarioState] = useState(() => getScenarioState(demoScenarios[0].id));
-  const [activeAlert, setActiveAlert] = useState(() => (
-    getDisplayTransaction(getScenarioState(demoScenarios[0].id).pendingTransactions[0])
-  ));
-  const [interceptedPurchase, setInterceptedPurchase] = useState(() => (
-    getDisplayTransaction(getScenarioState(demoScenarios[0].id).pendingTransactions[0])
-  ));
+  const [activeAlert, setActiveAlert] = useState(() => {
+    const state = getScenarioState(demoScenarios[0].id);
+    return state.pendingTransactions[0] ? getDisplayTransaction(state.pendingTransactions[0], state.childProfiles) : null;
+  });
+  const [interceptedPurchase, setInterceptedPurchase] = useState(() => {
+    const state = getScenarioState(demoScenarios[0].id);
+    return state.pendingTransactions[0] ? getDisplayTransaction(state.pendingTransactions[0], state.childProfiles) : null;
+  });
   const [geminiApiKey, setGeminiApiKey] = useState('');
 
   const {
@@ -373,13 +391,13 @@ export const AppProvider = ({ children }) => {
   } = scenarioState;
 
   const displayPendingTransactions = useMemo(
-    () => pendingTransactions.map(getDisplayTransaction),
-    [pendingTransactions]
+    () => pendingTransactions.map(t => getDisplayTransaction(t, childProfiles)),
+    [pendingTransactions, childProfiles]
   );
 
   const displayHistoryTransactions = useMemo(
-    () => historyTransactions.map(getDisplayTransaction),
-    [historyTransactions]
+    () => historyTransactions.map(t => getDisplayTransaction(t, childProfiles)),
+    [historyTransactions, childProfiles]
   );
 
   const analytics = useMemo(() => {
@@ -410,15 +428,15 @@ export const AppProvider = ({ children }) => {
 
     setActiveScenarioId(scenarioId);
     setScenarioState(nextState);
-    setActiveAlert(firstPending ? getDisplayTransaction(firstPending) : null);
-    setInterceptedPurchase(firstPending ? getDisplayTransaction(firstPending) : null);
+    setActiveAlert(firstPending ? getDisplayTransaction(firstPending, nextState.childProfiles) : null);
+    setInterceptedPurchase(firstPending ? getDisplayTransaction(firstPending, nextState.childProfiles) : null);
   };
 
   const approveTransaction = (id) => {
     const transaction = pendingTransactions.find((item) => item.id === id);
     if (!transaction) return;
 
-    const displayTransaction = getDisplayTransaction(transaction);
+    const displayTransaction = getDisplayTransaction(transaction, childProfiles);
 
     setScenarioState((current) => ({
       ...current,
@@ -443,7 +461,7 @@ export const AppProvider = ({ children }) => {
     const transaction = pendingTransactions.find((item) => item.id === id);
     if (!transaction) return;
 
-    const displayTransaction = getDisplayTransaction(transaction);
+    const displayTransaction = getDisplayTransaction(transaction, childProfiles);
 
     setScenarioState((current) => ({
       ...current,

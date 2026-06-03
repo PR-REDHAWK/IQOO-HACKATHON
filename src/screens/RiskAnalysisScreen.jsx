@@ -89,7 +89,8 @@ export const RiskAnalysisScreen = () => {
                 { name: 'Age Appropriate', score: activeTx.riskMetrics?.ageRisk || 0, icon: 'face' },
                 { name: 'Amount Factor', score: activeTx.riskMetrics?.amountRisk || 0, icon: 'payments' },
                 { name: 'Transaction Frequency', score: activeTx.riskMetrics?.frequencyRisk || 0, icon: 'speed' },
-                { name: 'Launch Window', score: activeTx.riskMetrics?.timeRisk || 0, icon: 'schedule' }
+                { name: 'Launch Window', score: activeTx.riskMetrics?.timeRisk || 0, icon: 'schedule' },
+                { name: 'Category Risk', score: activeTx.riskMetrics?.categoryRisk || 0, icon: 'category' }
               ].map((risk, idx) => (
                 <div key={idx} className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-3 rounded-xl">
                   <span className={`material-symbols-outlined text-[20px] ${
@@ -114,11 +115,22 @@ export const RiskAnalysisScreen = () => {
               <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 auto_awesome
               </span>
-              AI Risk Explanation
+              Risk Evaluation Breakdown
             </div>
-            <p className="text-[14px] text-white leading-relaxed italic relative z-10">
-              "{activeTx.aiExplanation}"
-            </p>
+            <ul className="list-disc pl-5 text-[13px] text-white space-y-1 relative z-10">
+              {activeTx.riskReasons?.map((reason, idx) => (
+                <li key={idx} className="leading-relaxed">{reason}</li>
+              ))}
+            </ul>
+            <div className="mt-4 pt-3 border-t border-secondary-container/20 relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                 <p className="text-xs text-on-surface-variant uppercase tracking-wider font-bold mb-0.5">Recommended Action</p>
+                 <p className="text-secondary-container font-extrabold text-sm">{activeTx.recommendation}</p>
+              </div>
+              <div className="px-3 py-1.5 rounded-full bg-secondary-container/10 border border-secondary-container/30 text-secondary-container text-xs font-bold uppercase tracking-wider self-start sm:self-auto">
+                 {activeTx.riskLevel} Risk
+              </div>
+            </div>
           </div>
         </div>
 
