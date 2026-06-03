@@ -15,7 +15,8 @@ export const DashboardScreen = () => {
     declineTransaction,
     geminiApiKey,
     saveGeminiKey,
-    resetDemo
+    resetDemo,
+    historyTransactions
   } = useContext(AppContext);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -27,10 +28,10 @@ export const DashboardScreen = () => {
   );
   
   const pendingRequestsCount = displayPendingTransactionsFiltered.length;
-  const approvedTodayCount = displayHistoryTransactions.filter(
+  const approvedTodayCount = historyTransactions.filter(
     (t) => t.status === 'completed' || t.status === 'APPROVED'
   ).length;
-  const rejectedTodayCount = displayHistoryTransactions.filter(
+  const rejectedTodayCount = historyTransactions.filter(
     (t) => t.status === 'rejected' || t.status === 'BLOCKED'
   ).length;
   const highRiskRequestsCount = displayPendingTransactionsFiltered.filter(
