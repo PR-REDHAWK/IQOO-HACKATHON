@@ -36,19 +36,6 @@ export const OtpVerificationScreen = () => {
   return (
     <div className="min-h-screen bg-black text-[#e2e2e2] pt-20 pb-28 px-4 md:px-16 max-w-[1280px] mx-auto flex flex-col items-center justify-center space-y-6 relative">
       
-      {/* Simulated SMS Notification Banner */}
-      <div className="w-full max-w-md bg-zinc-900 border border-white/10 p-4 rounded-xl shadow-2xl flex items-start gap-3 animate-fade-in relative z-20">
-        <div className="w-8 h-8 rounded-full bg-secondary-container/20 flex items-center justify-center border border-secondary-container/30 flex-shrink-0">
-          <span className="material-symbols-outlined text-secondary-container text-[18px]">sms</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Simulated Parent SMS Alert</p>
-          <p className="text-[12px] text-white leading-relaxed font-semibold mt-1">
-            "SecurePlay Security Shield: Your OTP code for approving the <span className="text-secondary-container">{t.gameName}</span> purchase is <span className="text-primary-fixed-dim font-bold font-mono tracking-widest text-[14px] bg-white/5 px-2 py-0.5 rounded">{storedOtp}</span>."
-          </p>
-        </div>
-        <span className="text-[9px] text-on-surface-variant font-mono">Just Now</span>
-      </div>
 
       {/* Main Form Bento Card */}
       <div className="w-full max-w-md bg-[#121212] border border-white/10 rounded-3xl p-6 md:p-8 space-y-6 relative overflow-hidden shadow-2xl">

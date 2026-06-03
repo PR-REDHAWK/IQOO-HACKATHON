@@ -1,6 +1,7 @@
 import { useCallback, useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { RiskMeter } from '../components/RiskMeter';
+import { getAiMode } from '../services/geminiAdvisor';
 
 export const ApprovalScreen = () => {
   const { 
@@ -8,14 +9,40 @@ export const ApprovalScreen = () => {
     activeAlert, 
     displayPendingTransactions,
     childProfiles, 
-    updateTransactionStatus
+    updateTransactionStatus,
+    aiAnalyses,
+    fetchAiAnalysisForTransaction
   } = useContext(AppContext);
 
   const [voiceProgress, setVoiceProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(false);
 
   const t = activeAlert || displayPendingTransactions[0];
   const child = t ? childProfiles[t.childId] || { name: t.childName } : null;
+
+  useEffect(() => {
+    let active = true;
+    const loadAnalysis = async () => {
+      if (!t) return;
+      if (aiAnalyses[t.id]) {
+        return;
+      }
+      
+      setLoading(true);
+      await fetchAiAnalysisForTransaction(t);
+      if (active) {
+        setLoading(false);
+      }
+    };
+    
+    loadAnalysis();
+    
+    return () => {
+      active = false;
+    };
+  }, [t, aiAnalyses, fetchAiAnalysisForTransaction]);
 
   const handleApprove = useCallback(() => {
     if (!t) return;
@@ -183,18 +210,186 @@ export const ApprovalScreen = () => {
               </div>
             </div>
 
-            {/* AI explanation block */}
-            <div className="bg-secondary-container/5 border border-secondary-container/20 p-4 rounded-xl space-y-2">
-              <div className="flex items-center gap-1.5 text-secondary-container text-xs font-bold uppercase tracking-wider">
-                <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  auto_awesome
-                </span>
-                AI Explanation for Parent
+            {/* AI Guardian Analysis Card */}
+            {loading ? (
+              <div className="bg-secondary-container/5 border border-dashed border-secondary-container/30 p-6 rounded-2xl space-y-4 animate-pulse relative overflow-hidden">
+                {/* Cyber scanning line */}
+                <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-secondary-container to-transparent top-0 animate-bounce"></div>
+                <div className="flex items-center gap-3 text-secondary-container">
+                  <span className="material-symbols-outlined text-[20px] animate-spin">
+                    progress_activity
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-widest font-mono">
+                    AI Guardian is analyzing this transaction...
+                  </span>
+                </div>
+                
+                {/* Shimmer placeholders */}
+                <div className="space-y-2">
+                  <div className="h-4 bg-white/5 rounded w-11/12 shimmer"></div>
+                  <div className="h-4 bg-white/5 rounded w-10/12 shimmer"></div>
+                  <div className="h-4 bg-white/5 rounded w-8/12 shimmer"></div>
+                </div>
               </div>
-              <p className="text-[13px] text-on-surface leading-relaxed italic">
-                "{t.aiExplanation}"
-              </p>
-            </div>
+            ) : (() => {
+              const analysis = aiAnalyses[t.id] || { 
+                summary: t.aiExplanation, 
+                concerns: t.riskReasons || [], 
+                recommendation: t.recommendation, 
+                confidence: 90 
+              };
+              const { mode } = getAiMode();
+              return (
+                <div className="glass-card ai-glow border-secondary-container/20 rounded-2xl p-6 space-y-6 relative overflow-hidden">
+                  {/* Decorative background aura */}
+                  <div className="absolute -top-12 -right-12 w-28 h-28 bg-secondary-container/5 rounded-full blur-2xl"></div>
+
+                  {/* Card Header & Badge */}
+                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-secondary-container text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        auto_awesome
+                      </span>
+                      <h4 className="font-headline-md text-[15px] font-bold text-white tracking-tight">
+                        AI Guardian Analysis
+                      </h4>
+                    </div>
+                    <span className={`text-[9px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                      mode === 'live' ? 'bg-secondary-container/10 text-secondary-container border border-secondary-container/20' : 'bg-primary-fixed-dim/15 text-primary-fixed-dim border border-primary-fixed-dim/20'
+                    }`}>
+                      {mode === 'live' ? 'Live Gemini Active' : 'Local Guard Mode'}
+                    </span>
+                  </div>
+
+                  {/* AI Summary Section */}
+                  <div className="space-y-1">
+                    <p className="text-[13px] text-on-surface leading-relaxed font-medium">
+                      "{analysis.summary}"
+                    </p>
+                  </div>
+
+                  {/* Concerns Bullet Points */}
+                  <div className="space-y-2.5 bg-white/[0.02] border border-white/5 p-4 rounded-xl">
+                    <h5 className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+                      Key Concerns Detected
+                    </h5>
+                    <ul className="space-y-2">
+                      {analysis.concerns && analysis.concerns.length > 0 ? (
+                        analysis.concerns.map((concern, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs text-white">
+                            <span className="material-symbols-outlined text-[14px] text-error font-bold mt-0.5">
+                              report
+                            </span>
+                            <span>{concern}</span>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="flex items-center gap-2 text-xs text-on-surface-variant">
+                          <span className="material-symbols-outlined text-[14px] text-secondary-container">
+                            check_circle
+                          </span>
+                          <span>No high-severity telemetry alerts flagged.</span>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* Rec Action + Confidence Score */}
+                  <div className="grid grid-cols-2 gap-4 pt-1">
+                    <div className="bg-white/[0.02] border border-white/5 p-3 rounded-xl">
+                      <span className="text-[10px] text-on-surface-variant uppercase font-bold block mb-1">
+                        Recommended Action
+                      </span>
+                      <span className="text-xs text-secondary-container font-extrabold flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">shield</span>
+                        {analysis.recommendation}
+                      </span>
+                    </div>
+                    
+                    <div className="bg-white/[0.02] border border-white/5 p-3 rounded-xl flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] text-on-surface-variant uppercase font-bold block">
+                          AI Confidence
+                        </span>
+                        <span className="text-[15px] text-white font-extrabold">
+                          {analysis.confidence}%
+                        </span>
+                      </div>
+                      {/* Circular mini gauge */}
+                      <div className="relative w-8 h-8 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                          <circle cx="16" cy="16" r="13" stroke="rgba(255,255,255,0.05)" strokeWidth="2.5" fill="transparent" />
+                          <circle 
+                            cx="16" cy="16" r="13" 
+                            stroke={analysis.confidence >= 90 ? '#00eefc' : '#e9c400'} 
+                            strokeWidth="2.5" fill="transparent" 
+                            strokeDasharray={`${2 * Math.PI * 13}`}
+                            strokeDashoffset={`${2 * Math.PI * 13 * (1 - (analysis.confidence || 90) / 100)}`}
+                          />
+                        </svg>
+                        <span className="absolute text-[8px] font-bold text-on-surface-variant font-mono">
+                          OK
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expandable Accordion: Why did AI decide this? */}
+                  <div className="border-t border-white/5 pt-4">
+                    <button 
+                      onClick={() => setAccordionOpen(!accordionOpen)}
+                      className="w-full flex justify-between items-center text-xs font-bold text-on-surface-variant hover:text-white uppercase tracking-wider active:scale-99 transition-all"
+                    >
+                      <span>Why did AI decide this?</span>
+                      <span className={`material-symbols-outlined text-[16px] transition-transform duration-300 ${accordionOpen ? 'rotate-180' : ''}`}>
+                        expand_more
+                      </span>
+                    </button>
+                    
+                    {accordionOpen && (
+                      <div className="mt-3 p-4 bg-black/40 border border-white/5 rounded-xl space-y-3">
+                        <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                          SecurePlay's Guardian network parsed the following risk signals and historical telemetry context to calculate decision scores:
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-[10px] font-medium text-white">
+                          <div className="flex items-center gap-1.5 p-2 bg-white/[0.02] rounded-lg border border-white/5">
+                            <span className="material-symbols-outlined text-[13px] text-secondary-container">child_care</span>
+                            <span>Child Age: {child?.age || 12} yrs</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 p-2 bg-white/[0.02] rounded-lg border border-white/5">
+                            <span className="material-symbols-outlined text-[13px] text-secondary-container">payments</span>
+                            <span>Value: ${t.amount}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 p-2 bg-white/[0.02] rounded-lg border border-white/5">
+                            <span className="material-symbols-outlined text-[13px] text-secondary-container">update</span>
+                            <span>Today Count: {child?.transactionsTodayCount || 0} reqs</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 p-2 bg-white/[0.02] rounded-lg border border-white/5">
+                            <span className="material-symbols-outlined text-[13px] text-secondary-container">query_stats</span>
+                            <span>Weekly: ${child?.spending || 0}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 p-2 bg-white/[0.02] rounded-lg border border-white/5 col-span-2">
+                            <span className="material-symbols-outlined text-[13px] text-secondary-container">storefront</span>
+                            <span>Category: {t.category || 'In-App'}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 p-2 bg-white/[0.02] rounded-lg border border-white/5 col-span-2">
+                            <span className="material-symbols-outlined text-[13px] text-secondary-container">admin_panel_settings</span>
+                            <span>Risk Engine: {t.riskScore}% ({t.riskLevel})</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              );
+            })()}
 
             {/* Standard actions */}
             <div className="flex gap-4 pt-2">

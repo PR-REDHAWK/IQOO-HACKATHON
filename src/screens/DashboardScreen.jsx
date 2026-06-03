@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { AppContext } from '../context/AppContext';
+import { getAiMode } from '../services/geminiAdvisor';
 
 export const DashboardScreen = () => {
   const {
@@ -13,15 +14,13 @@ export const DashboardScreen = () => {
     setActiveAlert,
     approveTransaction,
     declineTransaction,
-    geminiApiKey,
-    saveGeminiKey,
     resetDemo,
     historyTransactions,
-    updateTransactionStatus
+    updateTransactionStatus,
+    otps
   } = useContext(AppContext);
 
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState(geminiApiKey);
   
   // Exclude 'intercepted' transactions from parent view until child submits
   const displayPendingTransactionsFiltered = displayPendingTransactions.filter(
@@ -48,12 +47,6 @@ export const DashboardScreen = () => {
   
   const formatCurrency = (value) =>
     value.toLocaleString('en-US', { minimumFractionDigits: 2 });
-
-  const handleSaveKey = (e) => {
-    e.preventDefault();
-    saveGeminiKey(apiKeyInput);
-    setShowSettings(false);
-  };
 
   const handleCardClick = (transaction) => {
     setActiveAlert(transaction);
@@ -84,37 +77,43 @@ export const DashboardScreen = () => {
         </div>
       </div>
 
-      {/* Settings Modal (Gemini API Key) */}
-      {showSettings && (
-        <div className="glass-card rounded-2xl p-6 border border-primary-container/20 bg-black/90 space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-headline-md text-[18px] font-bold text-primary-fixed-dim">AI Risk Engine Settings</h3>
-            <button onClick={() => setShowSettings(false)} className="text-on-surface-variant hover:text-white">
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-          </div>
-          <form onSubmit={handleSaveKey} className="space-y-3">
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Configure your Gemini API key to enable live generation of AI Explanations. If empty, SecurePlay uses a localized rule-based engine that produces identical structures.
-            </p>
-            <div className="flex gap-3">
-              <input
-                type="password"
-                placeholder="Paste Gemini API Key..."
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-secondary-container"
-              />
-              <button 
-                type="submit" 
-                className="px-4 py-2 bg-secondary-container text-on-secondary-container font-bold text-xs rounded-xl hover:brightness-110 active:scale-95 transition-all"
-              >
-                Save Key
+      {/* Settings Modal (Gemini Status HUD) */}
+      {showSettings && (() => {
+        const { mode } = getAiMode();
+        const isLive = mode === 'live';
+        return (
+          <div className="glass-card rounded-2xl p-6 border border-primary-container/20 bg-black/90 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-headline-md text-[18px] font-bold text-primary-fixed-dim">AI Risk Engine Settings</h3>
+              <button onClick={() => setShowSettings(false)} className="text-on-surface-variant hover:text-white">
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
-          </form>
-        </div>
-      )}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                <span className={`w-3.5 h-3.5 rounded-full ${isLive ? 'bg-secondary-container animate-pulse shadow-[0_0_12px_#00eefc]' : 'bg-primary-container animate-pulse shadow-[0_0_12px_#ffd700]'}`}></span>
+                <div>
+                  <p className="text-xs font-bold text-white uppercase tracking-wider">
+                    {isLive ? 'Live Gemini Model Active' : 'Local Guard Mode Active'}
+                  </p>
+                  <p className="text-[10px] text-on-surface-variant">
+                    {isLive ? 'Powered by Gemini 1.5 Flash API' : 'Powered by Local Policy Classifier'}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                {isLive 
+                  ? 'SecurePlay automatically detected your Gemini API Key in environment variables. Live AI-driven analysis is active and caching responses.' 
+                  : 'No active Gemini API key was found in environment variables. SecurePlay has enabled the Local Compliance Engine. The UI, analysis schemas, and security recommendations remain identical.'
+                }
+              </p>
+              <div className="text-[10px] text-on-surface-variant uppercase font-semibold border-t border-white/5 pt-3">
+                API Key Source: <span className="font-mono text-white">{isLive ? 'VITE_GEMINI_API_KEY (.env)' : 'None (Fallback Mode)'}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Quick Stats Hero */}
       <section className="bg-gradient-to-r from-surface-container-high/80 to-[#121212] glass-card rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-white/10">
@@ -237,24 +236,32 @@ export const DashboardScreen = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2.5 mt-2">
-                    <button 
-                      onClick={() => updateTransactionStatus(t.id, 'rejected')}
-                      className="flex-1 py-2.5 rounded-full bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 active:scale-95 transition-all text-xs font-bold"
-                    >
-                      Deny
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setActiveAlert(t);
-                        updateTransactionStatus(t.id, 'approved');
-                        setActiveScreen('face-verification');
-                      }}
-                      className="flex-1 py-2.5 rounded-full bg-primary-container text-on-primary hover:brightness-110 active:scale-95 transition-all text-xs font-bold"
-                    >
-                      Approve
-                    </button>
-                  </div>
+                  {t.status === 'otp_pending' ? (
+                    <div className="mt-2 bg-secondary-container/10 border border-secondary-container/20 rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-secondary-container font-bold uppercase tracking-wider mb-1">Generated OTP Code</p>
+                      <p className="font-mono text-2xl font-extrabold text-white tracking-[0.2em]">{otps[t.id]}</p>
+                      <p className="text-[9px] text-on-surface-variant mt-1">Provide this to {child.name} to complete payment</p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2.5 mt-2">
+                      <button 
+                        onClick={() => updateTransactionStatus(t.id, 'rejected')}
+                        className="flex-1 py-2.5 rounded-full bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 active:scale-95 transition-all text-xs font-bold"
+                      >
+                        Deny
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setActiveAlert(t);
+                          updateTransactionStatus(t.id, 'approved');
+                          setActiveScreen('face-verification');
+                        }}
+                        className="flex-1 py-2.5 rounded-full bg-primary-container text-on-primary hover:brightness-110 active:scale-95 transition-all text-xs font-bold"
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

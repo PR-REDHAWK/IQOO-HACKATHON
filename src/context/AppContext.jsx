@@ -1,6 +1,7 @@
 import { createContext, useMemo, useState } from 'react';
 import { calculateRisk } from '../utils/riskEngine';
 import { generateOTP, verifyOTP } from '../utils/verification';
+import { generateTransactionAnalysis } from '../services/geminiAdvisor';
 
 export const AppContext = createContext();
 
@@ -386,6 +387,42 @@ export const AppProvider = ({ children }) => {
     return state.pendingTransactions[0] ? getDisplayTransaction(state.pendingTransactions[0], state.childProfiles) : null;
   });
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [aiAnalyses, setAiAnalyses] = useState({});
+
+  const fetchAiAnalysisForTransaction = async (transaction) => {
+    if (!transaction) return null;
+    if (aiAnalyses[transaction.id]) {
+      return aiAnalyses[transaction.id];
+    }
+
+    const childId = transaction.childId || toChildId(transaction.childName);
+    const profile = childProfiles[childId] || { age: 10, spending: 0, transactionsTodayCount: 0 };
+
+    const input = {
+      childAge: profile.age,
+      amount: transaction.amount,
+      merchant: transaction.gameName || transaction.game || 'Unknown App',
+      category: transaction.category || 'In-App',
+      riskScore: transaction.riskScore,
+      riskLevel: transaction.riskLevel,
+      reasons: transaction.riskReasons || [],
+      recommendation: transaction.recommendation,
+      purchaseCountToday: profile.transactionsTodayCount,
+      weeklySpend: profile.spending
+    };
+
+    try {
+      const analysis = await generateTransactionAnalysis(input);
+      setAiAnalyses((prev) => ({
+        ...prev,
+        [transaction.id]: analysis
+      }));
+      return analysis;
+    } catch (err) {
+      console.error('Failed to fetch AI analysis', err);
+      return null;
+    }
+  };
 
   const {
     childProfiles,
@@ -601,6 +638,8 @@ export const AppProvider = ({ children }) => {
         setInterceptedPurchase,
         geminiApiKey,
         saveGeminiKey,
+        aiAnalyses,
+        fetchAiAnalysisForTransaction,
         
         // Phase 2B additions
         otps,
