@@ -8,8 +8,7 @@ export const ApprovalScreen = () => {
     activeAlert, 
     displayPendingTransactions,
     childProfiles, 
-    approveTransaction, 
-    declineTransaction 
+    updateTransactionStatus
   } = useContext(AppContext);
 
   const [voiceProgress, setVoiceProgress] = useState(0);
@@ -20,15 +19,15 @@ export const ApprovalScreen = () => {
 
   const handleApprove = useCallback(() => {
     if (!t) return;
-    approveTransaction(t.id);
-    setActiveScreen('dashboard');
-  }, [approveTransaction, setActiveScreen, t]);
+    updateTransactionStatus(t.id, 'approved');
+    setActiveScreen('face-verification');
+  }, [updateTransactionStatus, setActiveScreen, t]);
 
   const handleReject = useCallback(() => {
     if (!t) return;
-    declineTransaction(t.id);
+    updateTransactionStatus(t.id, 'rejected');
     setActiveScreen('dashboard');
-  }, [declineTransaction, setActiveScreen, t]);
+  }, [updateTransactionStatus, setActiveScreen, t]);
 
   // Voice activation hold logic
   useEffect(() => {

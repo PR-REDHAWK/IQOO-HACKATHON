@@ -20,11 +20,30 @@ export const DashboardScreen = () => {
 
   const [showSettings, setShowSettings] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(geminiApiKey);
-  const pendingApprovalCount = pendingTransactions.length;
-  const highestRiskScore = displayPendingTransactions.reduce(
+  
+  // Exclude 'intercepted' transactions from parent view until child submits
+  const displayPendingTransactionsFiltered = displayPendingTransactions.filter(
+    (t) => t.status === 'pending' || t.status === 'approved' || t.status === 'otp_pending'
+  );
+  
+  const pendingRequestsCount = displayPendingTransactionsFiltered.length;
+  const approvedTodayCount = displayHistoryTransactions.filter(
+    (t) => t.status === 'completed' || t.status === 'APPROVED'
+  ).length;
+  const rejectedTodayCount = displayHistoryTransactions.filter(
+    (t) => t.status === 'rejected' || t.status === 'BLOCKED'
+  ).length;
+  const highRiskRequestsCount = displayPendingTransactionsFiltered.filter(
+    (t) => t.riskScore >= 75
+  ).length;
+
+  const highestRiskScore = displayPendingTransactionsFiltered.reduce(
     (highest, transaction) => Math.max(highest, transaction.riskScore),
     0
   );
+  
+  const pendingApprovalCount = pendingRequestsCount;
+  
   const formatCurrency = (value) =>
     value.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
@@ -116,10 +135,10 @@ export const DashboardScreen = () => {
       {/* Context Metrics */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Pending Approvals', value: pendingApprovalCount, icon: 'pending_actions', color: 'text-primary-fixed-dim' },
-          { label: 'Approved', value: approvedCount, icon: 'check_circle', color: 'text-secondary-container' },
-          { label: 'Blocked', value: blockedCount, icon: 'block', color: 'text-error' },
-          { label: 'Protected', value: `$${formatCurrency(totalProtectedAmount)}`, icon: 'shield', color: 'text-secondary-container' }
+          { label: 'Pending Requests', value: pendingRequestsCount, icon: 'pending_actions', color: 'text-primary-fixed-dim' },
+          { label: 'Approved Today', value: approvedTodayCount, icon: 'check_circle', color: 'text-secondary-container' },
+          { label: 'Rejected Today', value: rejectedTodayCount, icon: 'block', color: 'text-error' },
+          { label: 'High Risk Requests', value: highRiskRequestsCount, icon: 'warning', color: 'text-error' }
         ].map((metric) => (
           <div key={metric.label} className="glass-card rounded-2xl p-4 border border-white/5 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 flex-shrink-0">
@@ -159,7 +178,7 @@ export const DashboardScreen = () => {
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 snap-x">
-            {displayPendingTransactions.map((t) => {
+            {displayPendingTransactionsFiltered.map((t) => {
               const child = childProfiles[t.childId];
               const isHigh = t.riskScore >= 75;
               const isMed = t.riskScore >= 40 && t.riskScore < 75;

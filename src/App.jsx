@@ -9,6 +9,9 @@ import AgeVerificationScreen from './screens/AgeVerificationScreen';
 import ApprovalScreen from './screens/ApprovalScreen';
 import RiskAnalysisScreen from './screens/RiskAnalysisScreen';
 import AnalyticsScreen from './screens/AnalyticsScreen';
+import FaceVerificationScreen from './screens/FaceVerificationScreen';
+import OtpVerificationScreen from './screens/OtpVerificationScreen';
+import SuccessScreen from './screens/SuccessScreen';
 
 const MainAppContent = () => {
   const { activeScreen } = useContext(AppContext);
@@ -30,12 +33,21 @@ const MainAppContent = () => {
         return <RiskAnalysisScreen />;
       case 'analytics':
         return <AnalyticsScreen />;
+      case 'face-verification':
+        return <FaceVerificationScreen />;
+      case 'otp-entry':
+        return <OtpVerificationScreen />;
+      case 'success':
+        return <SuccessScreen />;
       default:
         return <LandingScreen />;
     }
   };
 
-  const showNavbar = activeScreen !== 'landing';
+  const showNavbar = activeScreen !== 'landing' && 
+                     activeScreen !== 'face-verification' && 
+                     activeScreen !== 'otp-entry' && 
+                     activeScreen !== 'success';
 
   return (
     <div className="flex flex-col min-h-screen">

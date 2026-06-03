@@ -8,7 +8,8 @@ export const AgeVerificationScreen = () => {
     activeAlert,
     displayPendingTransactions,
     childProfiles,
-    setActiveAlert
+    setActiveAlert,
+    updateTransactionStatus
   } = useContext(AppContext);
   const [scanProgress, setScanProgress] = useState(0);
   const [isScanning, setIsScanning] = useState(true);
@@ -49,11 +50,11 @@ export const AgeVerificationScreen = () => {
   };
 
   const handleConfirm = () => {
-    // Navigate parent straight to the approval screen for this transaction
     if (activeTx) {
+      updateTransactionStatus(activeTx.id, 'pending');
       setActiveAlert(activeTx);
     }
-    setActiveScreen('approval');
+    setActiveScreen('purchase');
   };
 
   return (

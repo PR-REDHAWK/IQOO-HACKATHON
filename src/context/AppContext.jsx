@@ -1,5 +1,6 @@
 import { createContext, useMemo, useState } from 'react';
 import { calculateRisk } from '../utils/riskEngine';
+import { generateOTP, verifyOTP } from '../utils/verification';
 
 export const AppContext = createContext();
 
@@ -328,9 +329,13 @@ const getScenario = (scenarioId) =>
 const getScenarioState = (scenarioId) => {
   const scenario = getScenario(scenarioId);
   const historyTransactions = clone(scenario.historyTransactions);
-  const pendingTransactions = clone(scenario.pendingTransactions);
-  const blockedTransactions = historyTransactions.filter((item) => item.status === 'BLOCKED');
-  const approvedTransactions = historyTransactions.filter((item) => item.status === 'APPROVED');
+  const pendingTransactions = clone(scenario.pendingTransactions).map(tx => ({
+    ...tx,
+    status: 'intercepted',
+    createdAt: tx.createdAt || '10:42 PM'
+  }));
+  const blockedTransactions = historyTransactions.filter((item) => item.status === 'BLOCKED' || item.status === 'rejected');
+  const approvedTransactions = historyTransactions.filter((item) => item.status === 'APPROVED' || item.status === 'completed');
 
   return {
     childProfiles: clone(scenario.childProfiles),
@@ -371,6 +376,7 @@ export const AppProvider = ({ children }) => {
   const [activeScreen, setActiveScreen] = useState('landing');
   const [activeScenarioId, setActiveScenarioId] = useState(demoScenarios[0].id);
   const [scenarioState, setScenarioState] = useState(() => getScenarioState(demoScenarios[0].id));
+  const [otps, setOtps] = useState({});
   const [activeAlert, setActiveAlert] = useState(() => {
     const state = getScenarioState(demoScenarios[0].id);
     return state.pendingTransactions[0] ? getDisplayTransaction(state.pendingTransactions[0], state.childProfiles) : null;
@@ -428,6 +434,7 @@ export const AppProvider = ({ children }) => {
 
     setActiveScenarioId(scenarioId);
     setScenarioState(nextState);
+    setOtps({});
     setActiveAlert(firstPending ? getDisplayTransaction(firstPending, nextState.childProfiles) : null);
     setInterceptedPurchase(firstPending ? getDisplayTransaction(firstPending, nextState.childProfiles) : null);
   };
@@ -483,6 +490,83 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const updateTransactionStatus = (id, newStatus, extraData = {}) => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+    setScenarioState((current) => {
+      const pendingTxIndex = current.pendingTransactions.findIndex((item) => item.id === id);
+      if (pendingTxIndex === -1) return current;
+
+      const tx = current.pendingTransactions[pendingTxIndex];
+      
+      const updatedTx = {
+        ...tx,
+        status: newStatus,
+        ...extraData
+      };
+
+      // Handle audit timeline
+      if (newStatus === 'pending') {
+        updatedTx.createdAt = timestamp;
+      } else if (newStatus === 'approved') {
+        updatedTx.approvedAt = timestamp;
+      } else if (newStatus === 'otp_pending') {
+        updatedTx.faceVerifiedAt = timestamp;
+        updatedTx.otpGeneratedAt = timestamp;
+      } else if (newStatus === 'completed') {
+        updatedTx.completedAt = timestamp;
+      } else if (newStatus === 'rejected') {
+        updatedTx.rejectedAt = timestamp;
+      }
+
+      let nextPending = [...current.pendingTransactions];
+      let nextHistory = [...current.historyTransactions];
+      let nextApprovedCount = current.approvedCount;
+      let nextBlockedCount = current.blockedCount;
+      let nextTotalProtectedAmount = current.totalProtectedAmount;
+
+      const displayTx = getDisplayTransaction(updatedTx, current.childProfiles);
+
+      if (newStatus === 'completed') {
+        nextPending = nextPending.filter((item) => item.id !== id);
+        nextHistory = [
+          { ...displayTx, status: 'completed', time: 'Just Now' },
+          ...nextHistory
+        ];
+        nextApprovedCount += 1;
+      } else if (newStatus === 'rejected') {
+        nextPending = nextPending.filter((item) => item.id !== id);
+        nextHistory = [
+          { ...displayTx, status: 'rejected', time: 'Just Now' },
+          ...nextHistory
+        ];
+        nextBlockedCount += 1;
+        nextTotalProtectedAmount += tx.amount;
+      } else {
+        nextPending[pendingTxIndex] = updatedTx;
+      }
+
+      setTimeout(() => {
+        if (newStatus === 'completed' || newStatus === 'rejected') {
+          setActiveAlert(null);
+          setInterceptedPurchase(null);
+        } else {
+          setActiveAlert(displayTx);
+          setInterceptedPurchase(displayTx);
+        }
+      }, 0);
+
+      return {
+        ...current,
+        pendingTransactions: nextPending,
+        historyTransactions: nextHistory,
+        approvedCount: nextApprovedCount,
+        blockedCount: nextBlockedCount,
+        totalProtectedAmount: nextTotalProtectedAmount
+      };
+    });
+  };
+
   const resetDemo = () => {
     switchScenario(activeScenarioId);
   };
@@ -516,7 +600,14 @@ export const AppProvider = ({ children }) => {
         interceptedPurchase,
         setInterceptedPurchase,
         geminiApiKey,
-        saveGeminiKey
+        saveGeminiKey,
+        
+        // Phase 2B additions
+        otps,
+        setOtps,
+        updateTransactionStatus,
+        generateOTP,
+        verifyOTP
       }}
     >
       {children}
