@@ -16,7 +16,8 @@ export const DashboardScreen = () => {
     geminiApiKey,
     saveGeminiKey,
     resetDemo,
-    historyTransactions
+    historyTransactions,
+    updateTransactionStatus
   } = useContext(AppContext);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -238,13 +239,17 @@ export const DashboardScreen = () => {
                   {/* Action Buttons */}
                   <div className="flex gap-2.5 mt-2">
                     <button 
-                      onClick={() => declineTransaction(t.id)}
+                      onClick={() => updateTransactionStatus(t.id, 'rejected')}
                       className="flex-1 py-2.5 rounded-full bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 active:scale-95 transition-all text-xs font-bold"
                     >
                       Deny
                     </button>
                     <button 
-                      onClick={() => approveTransaction(t.id)}
+                      onClick={() => {
+                        setActiveAlert(t);
+                        updateTransactionStatus(t.id, 'approved');
+                        setActiveScreen('face-verification');
+                      }}
                       className="flex-1 py-2.5 rounded-full bg-primary-container text-on-primary hover:brightness-110 active:scale-95 transition-all text-xs font-bold"
                     >
                       Approve
